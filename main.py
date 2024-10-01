@@ -29,10 +29,9 @@ parser.add_argument("-p", "--progress", action="store_true", help="Show progress
 parser.add_argument("-ts", "--test", action="store_true", help="Run in test mode")
 parser.add_argument("-tr","--truth", default="truth/cultures_1.csv", type=str, help="Path to ground truth CSV file")
 parser.add_argument("-s", "--score", default=50.0, type=float, help="Similarity score threshold")
-parser.add_argument("-pr", "--prefix", type=str, help="Prefix of file Names", required=True)
 parser.add_argument("-o", "--output", default="", type=str, help="Output directory for results", required=True)
 parser.add_argument("-pp", "--post-process", action="store_true", default=False, help="Apply post-processing filter")
-parser.add_argument("-r", "--run-name", type=str, help="Run name for batch mode output directory", required=False)
+parser.add_argument("-r", "--run_name", type=str, help="Run name for batch mode output directory", required=False)
 
 
 def main():
@@ -67,7 +66,7 @@ def main():
             original_stdout = sys.stdout
             sys.stdout = f
             
-            comparison_df, paper_wise_df = compare_csv(args.truth, output_file, args.prefix, args.score)
+            comparison_df, paper_wise_df = compare_csv(args.truth, output_file, args.score)
             
             # Save CSV files
             comparison_df.to_csv(os.path.join(csv_dir, "Comparison.csv"), index=False)
@@ -234,7 +233,7 @@ def gptRun(filepath, verbose, progress, post_process = False):
 
 def similar(a, b):
     """Calculate similarity ratio between two strings."""
-    return SequenceMatcher(None, a, b).ratio()
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 if __name__ == "__main__":
     main()

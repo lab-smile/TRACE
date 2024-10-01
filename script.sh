@@ -8,24 +8,38 @@
 #SBATCH --time=12:00:00
 #SBATCH --output=output/NewResults/%x.%j.out
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=dev@thecka.tech
+#SBATCH --mail-user=your_email@example.com
 
 pwd
 date
 module load singularity
 
 # Define common variables
-SINGULARITY_IMAGE="/blue/ruogu.fang/chintan.acharya/monaicore1.3.0"
-INPUT_DIR="/blue/ruogu.fang/chintan.acharya/smile-lab/Ancestry/RegexAndChatgpt/papers/Science_of_Translational_Medicine"
-OUTPUT_DIR="/blue/ruogu.fang/chintan.acharya/smile-lab/Ancestry/NewResults"
-TRUTH_FILE="/blue/ruogu.fang/chintan.acharya/smile-lab/Ancestry/RegexAndChatgpt/truth/cultures_1.csv"
-PREFIX="9_filtered"
-SCORE=50.0
+SINGULARITY_IMAGE="/path/to/your/singularity/image"
+INPUT_DIRECTORY="/path/to/your/input/directory"
+OUTPUT_DIRECTORY="/path/to/your/output/directory"
+TRUTH_FILE="/path/to/your/truth/file.csv"
+SCORE_VALUE=50.0
 
 # Run 1 (with post-process)
-singularity exec --bind /red --nv $SINGULARITY_IMAGE python /blue/ruogu.fang/chintan.acharya/smile-lab/Ancestry/RegexAndChatgpt/main.py -t ChatGPT -b -d $INPUT_DIR -ts --tr $TRUTH_FILE -s $SCORE -pr $PREFIX -o $OUTPUT_DIR -pp -r "batch_run_1"
-
+singularity exec --bind /red --nv $SINGULARITY_IMAGE python /path/to/your/main.py \
+    --task ChatGPT \
+    --batch \
+    --directory $INPUT_DIRECTORY \
+    --test-similarity \
+    --truth-file $TRUTH_FILE \
+    --score $SCORE_VALUE \
+    --output-directory $OUTPUT_DIRECTORY \
+    --post-process \
+    --run "batch_run_1"
 
 # Run 2 (without post-process)
-singularity exec --bind /red --nv $SINGULARITY_IMAGE python /blue/ruogu.fang/chintan.acharya/smile-lab/Ancestry/RegexAndChatgpt/main.py -t ChatGPT -b -d $INPUT_DIR -ts --tr $TRUTH_FILE -s $SCORE -pr $PREFIX -o $OUTPUT_DIR -r "batch_run_1"
-
+singularity exec --bind /red --nv $SINGULARITY_IMAGE python /path/to/your/main.py \
+    --task ChatGPT \
+    --batch \
+    --directory $INPUT_DIRECTORY \
+    --test-similarity \
+    --truth-file $TRUTH_FILE \
+    --score $SCORE_VALUE \
+    --output-directory $OUTPUT_DIRECTORY \
+    --run "batch_run_1"

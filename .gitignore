@@ -1,2 +1,6 @@
 .env
-
+truth
+papers
+*/__pycache__
+CSVs
+output

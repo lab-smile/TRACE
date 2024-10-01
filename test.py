@@ -14,10 +14,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-t", "--true", default="", type=str, help="True or Human made file", required=True)
 parser.add_argument("-g", "--gpt", default="", type=str, help="GPT and web generated file", required=True)
 parser.add_argument("-s", "--score", default=50.0, type=float, help="Similarity score threshold")
-parser.add_argument("-p", "--prefix", type=str, help="Prefix of file Names")
 parser.add_argument("-o", "--output", default="", type=str, help="Output directory for test results", required=True)
 
-def compare_csv(true_csv, gpto_csv, prefix, sim_score_thresh = 50.0):
+def compare_csv(true_csv, gpto_csv, sim_score_thresh = 50.0):
     print("Starting Comparison.")
     true_df = pd.read_csv(true_csv)
     gpto_df = pd.read_csv(gpto_csv)
@@ -218,7 +217,6 @@ def compare_csv(true_csv, gpto_csv, prefix, sim_score_thresh = 50.0):
                                                              'Matches_Found_Paper_Wise_With_Similarity_Score_100'
                                                             ])
 
-    print(f"Comparison Completed, saved to {prefix}Comparison.csv and {prefix}PaperWise.csv")
     print("Final Result")
     print("------------------------------------")
     print("Overall Similarity Score: " ,sum(paper_wise_avg_similarity_score) / length)
@@ -353,7 +351,7 @@ def main():
         original_stdout = sys.stdout
         sys.stdout = f
         
-        comparison_df, paper_wise_df = compare_csv(args.true, args.gpt, args.prefix, args.score)
+        comparison_df, paper_wise_df = compare_csv(args.true, args.gpt, args.score)
         
         # Save CSV files
         comparison_df.to_csv(os.path.join(csv_dir, "Comparison.csv"), index=False)
