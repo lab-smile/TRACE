@@ -1,0 +1,6 @@
+def progress_bar(current, total, bar_length=20, verbose=False):
+    fraction = current / total
+    arrow = int(fraction * bar_length - 1) * '-' + '>'
+    padding = int(bar_length - len(arrow)) * ' '
+    ending = '\n' if current == total or verbose else '\r'
+    print(f'Progress: [{arrow}{padding}] {int(fraction*100)}%', end=ending)
