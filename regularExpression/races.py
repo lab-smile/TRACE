@@ -1,3 +1,7 @@
+"""
+This module contains a list of race and ethnicity terms used for pattern matching in the cell culture analysis.
+"""
+
 races = [
     "Caucasian", "White", "Mongoloid", "Asian", "Negroid", "Black", "Australoid", "Capoid", "Khoisan", "Mixed",
     "Mulatto", "Mestizo", "Zambo", "Afroasiatic", "Semitic", "Cushitic", "Berber", "Arabs", "Somali",
@@ -16,4 +20,3 @@ races = [
     "Kannada", "Iranic", "Baloch", "Pashtun", "Turkic", "Mongolic", "Mongolian", "Indo-Iranian", "Tajik", "Persian",
     "Austronesian", "Indonesian", "Malaysian", "Indo-Chinese", "Khmer", "Indigenous Siberian"
 ]
-

@@ -5,6 +5,7 @@ client = OpenAI()
 
 
 def gptUseCultures(chunk, verbose=False):
+    """Extract cell cultures from a text chunk using GPT."""
     if verbose:
         print("Analyzing chunk for cell cultures...")
     try:
@@ -27,6 +28,7 @@ def gptUseCultures(chunk, verbose=False):
 
 
 def gptUseEthnicities(chunk, cultures, verbose=False):
+    """Extract ethnicities from a text chunk using GPT."""
     if verbose:
         print("Analyzing chunk for ethnicities...")
     try:
@@ -49,6 +51,7 @@ def gptUseEthnicities(chunk, cultures, verbose=False):
 
 
 def gptForPrimaryCellCultures(culture, text, verbose=False):
+    """Extract ancestry of a cell culture from a text using GPT."""
     if verbose:
         print("Analyzing text for primary cell cultures...")
     try:
@@ -70,12 +73,12 @@ def gptForPrimaryCellCultures(culture, text, verbose=False):
         return "-"
 
 def filterHyphenResult(result):
-    if result.strip().lower() in ['-', 'hyphen', '(-)', '- ']:
-        return ""
-    return result
+    """Remove hyphen-only results."""
+    return "" if result.strip().lower() in ['-', 'hyphen', '(-)', '- '] else result
 
 
 def gptFilterList(text, l, verbose=False):
+    """Filter a list of items using GPT."""
     if verbose:
         print("Filtering list...")
     completion = client.chat.completions.create(
@@ -90,4 +93,3 @@ def gptFilterList(text, l, verbose=False):
     if verbose:
         print(f"Filtered list: {result}")
     return result
-

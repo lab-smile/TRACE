@@ -1,12 +1,12 @@
 # TRACE
 TRACE: Tool for Researching Ancestry and Cell Extraction
 
-This project is designed to analyze scientific texts for mentions of human cell cultures and their associated ethnicities or races. It uses a combination of regular expression matching and AI-powered text analysis to extract relevant information from research papers.
+This project is designed to analyze scientific texts for mentions of human cell cultures and their associated ethnicities or races. It employs a combination of regular expression matching and AI-powered text analysis, utilizing ChatGPT to extract relevant information from research papers. Additionally, the project features web crawling functionality to gather supplementary data from Cellosaurus, enhancing the analysis with more comprehensive context.
 
 ## Features
 
 - Supports both single file and batch processing modes
-- Uses regular expressions and ChatGPT for analysis
+- Utilizes regular expressions and ChatGPT for in-depth analysis
 - Web crawling functionality to gather additional information from Cellosaurus
 - Progress tracking for batch operations
 - Verbose output option for detailed logging
@@ -35,13 +35,15 @@ This project is designed to analyze scientific texts for mentions of human cell 
 
 ### Running main.py
 
-For batch processing without post-processing:
 ```
-python main.py -t ChatGPT -b -d <INPUT_DIR> -v -p --test --truth <TRUTH_FILE> -s <SIMILARITY_SCORE> --prefix <PREFIX_FOR_OUTPUT> -o <OUTPUT_DIR> -r <RUN_NAME>
+python /path/to/your/main.py \
+    --batch \
+    --directory $INPUT_DIRECTORY \
+    --test-similarity \
+    --progress \
+    --truth-file $TRUTH_FILE \
+    --score $SCORE_VALUE \
+    --output-directory $OUTPUT_DIRECTORY \
+    --post-process \
+    --run "batch_run_1"
 ```
-
-For single file processing:
-```
-python main.py -t ChatGPT -f <INPUT_FILE> -v -p --test --truth <TRUTH_FILE> -s <SIMILARITY_SCORE> --prefix <PREFIX_FOR_OUTPUT> -o <OUTPUT_DIR>
-```
-

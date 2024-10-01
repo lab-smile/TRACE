@@ -1,3 +1,13 @@
+"""
+This module contains functions for comparing and visualizing the results of the cell culture analysis.
+It includes functions for comparing CSV files, calculating similarity scores, and generating various visualizations.
+"""
+
+# TODO: Consider breaking this file into smaller, more focused modules
+# TODO: Add type hints to function parameters and return values
+# TODO: Use f-strings instead of .format() for string formatting
+# TODO: Consider using a configuration file for constants and file paths
+
 from testhelper.helper import dict1, dict2, similar, remove_spaces, convert_string_to_df
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer

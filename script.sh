@@ -23,7 +23,6 @@ SCORE_VALUE=50.0
 
 # Run 1 (with post-process)
 singularity exec --bind /red --nv $SINGULARITY_IMAGE python /path/to/your/main.py \
-    --task ChatGPT \
     --batch \
     --directory $INPUT_DIRECTORY \
     --test-similarity \
@@ -35,11 +34,10 @@ singularity exec --bind /red --nv $SINGULARITY_IMAGE python /path/to/your/main.p
 
 # Run 2 (without post-process)
 singularity exec --bind /red --nv $SINGULARITY_IMAGE python /path/to/your/main.py \
-    --task ChatGPT \
     --batch \
     --directory $INPUT_DIRECTORY \
     --test-similarity \
     --truth-file $TRUTH_FILE \
     --score $SCORE_VALUE \
     --output-directory $OUTPUT_DIRECTORY \
-    --run "batch_run_1"
+    --run "batch_run_2"

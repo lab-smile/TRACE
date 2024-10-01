@@ -1,3 +1,8 @@
+"""
+This module contains a dictionary that maps ancestry categories to lists of related terms.
+It is used for checking the correctness of ancestry information retrieved from various sources.
+"""
+
 distribution = {
     "African": [
         "African", "Sub-Saharan African", "West African", "East African", 
