@@ -49,7 +49,7 @@ distribution = {
         "South Asian genomic profile"
     ],
     "European, North": [
-        "Northern European", "Northwestern European", "Nordic", "Germanic", 
+        "European", "Northern European", "Northwestern European", "Nordic", "Germanic", 
         "Anglo-Saxon", "Celtic", "Scandinavian", "Baltic", 
         "Northern European ancestry", "Northwestern European descent", 
         "Nordic origin", "Germanic lineage", "Anglo-Saxon heritage", 
@@ -57,7 +57,7 @@ distribution = {
         "Northern European genetic background", "Northwestern European genomic profile"
     ],
     "European, South": [
-        "Southern European", "Mediterranean", "Balkan", "Iberian", 
+        "European", "Southern European", "Mediterranean", "Balkan", "Iberian", 
         "Italian", "Greek", "Slavic", "Southern European ancestry", 
         "Mediterranean descent", "Balkan origin", "Iberian lineage", 
         "Italian heritage", "Greek population", "Slavic cohort", 
