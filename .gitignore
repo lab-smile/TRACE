@@ -7,3 +7,4 @@ output
 scriptnew.sh
 testnew.sh
 __pycache__
+results/*
