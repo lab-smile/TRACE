@@ -8,10 +8,9 @@ It includes functions for comparing CSV files, calculating similarity scores, an
 # TODO: Use f-strings instead of .format() for string formatting
 # TODO: Consider using a configuration file for constants and file paths
 
-from testhelper.helper import dict1, dict2, similar, remove_spaces, convert_string_to_df
+from chatgpt.chatgpt import gptMatchAncestries
+from testhelper.helper import dict1, dict2, similar
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,38 +22,38 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-t", "--true", default="", type=str, help="True or Human made file", required=True)
 parser.add_argument("-g", "--gpt", default="", type=str, help="GPT and web generated file", required=True)
+parser.add_argument("-c", "--gpt", action="store_true", help="Are the results curated?", required=True)
 parser.add_argument("-s", "--score", default=50.0, type=float, help="Similarity score threshold")
 parser.add_argument("-o", "--output", default="", type=str, help="Output directory for test results", required=True)
 
-def compare_csv(true_csv, gpto_csv, sim_score_thresh = 50.0):
+def compare_csv(true_csv, gpto_csv, curated, sim_score_thresh = 50.0):
     print("Starting Comparison.")
     true_df = pd.read_csv(true_csv)
     gpto_df = pd.read_csv(gpto_csv)
 
     true_df.columns = ['Name', 'Ancestry', 'Lines with Ancestry', 'Type', 'Supplier', 'Articles', 'Primary/Line', 'Notes', 'Body Part/Tissue', 'URL', 'Flag', 'Journal', 'flag']
-    true_df = true_df.drop(columns = ['Lines with Ancestry', 'Type', 'Supplier', 'Notes', 'Body Part/Tissue', 'URL', 'Flag', 'flag'])
+    true_df = true_df.drop(columns = [ 'Type', 'Supplier', 'Notes', 'Body Part/Tissue', 'URL', 'Flag', 'flag'])
 
     gpto_df = gpto_df.drop(columns = ['Gender', 'Age', 'Category'])
     true_df = true_df[true_df['Journal'] == 'https://www.notion.so/f3f7e3cf261449c3b4b8885d49aab57d']
     gpto_df = gpto_df.fillna('')
 
+    # Preparing data for testing
     true_dict = defaultdict(lambda : [])
-    count = 0
     for article in list(true_df['Articles'].unique()):
         for index, row in true_df[true_df['Articles'] == article].iterrows():
             try:
-                true_dict[dict2[row['Articles']]].append((index, row['Name'], row['Ancestry']))
+                true_dict[dict2[row['Articles']]].append((index, row['Name'], row['Ancestry'], row['Lines with Ancestry']))
             except KeyError:
                 break
 
     gpto_dict = defaultdict(lambda : [])
     for fid in list(gpto_df['File Id'].unique()):
         if dict1[int(fid[0:-4])] != "":
-            count = 0
             for index, row in gpto_df[gpto_df['File Id'] == fid].iterrows():
-                gpto_dict[int(fid[0:-4])].append((index, row['Name'], row['Ancestry Reported'], row['Ancestry Available'], row['Ancestry from Web']))
+                gpto_dict[int(fid[0:-4])].append((index, row['Name'], row['Ancestry Reported'], row['Ancestry Available'], row['Ancestry from Web'],row['Ancestry from GPT'], row['Type'], row['SimilarCultures']))
     
-
+    # Arranging Results According to Papers
     graph_len_gpt = []
     graph_len_tru = []
     papers = []
@@ -66,18 +65,13 @@ def compare_csv(true_csv, gpto_csv, sim_score_thresh = 50.0):
             graph_len_tru.append(true_dict[i])
             papers.append(i)
 
+    # Keeping Track of Scores for each papers
     paper_wise_avg_similarity_score = []
     paper_wise_ancestry_acc = []
     paper_wise_ancestry_inc = []
-    paper_wise_count_match_25 = []
-    paper_wise_count_match_50 = []
-    paper_wise_count_match_75 = []
     paper_wise_count_match_100 = []
-    special_cases = []
-    paper_wise_reported_corr = []
-    paper_wise_reported_inco = []
-    paper_wise_available_corr = []
-    paper_wise_available_inco = []
+    paper_wise_bad_matches = []
+    paper_wise_extras = []
     total_count = []
     comparison_df = []
 
@@ -85,67 +79,78 @@ def compare_csv(true_csv, gpto_csv, sim_score_thresh = 50.0):
         paper_avg_sim_score = 0
         paper_ancestry_acc = 0
         paper_ancestry_inc = 0
-        paper_reported_corr = 0
-        paper_reported_inco = 0
-        paper_count_match_25 = 0
-        paper_count_match_50 = 0
-        paper_count_match_75 = 0
         paper_count_match_100 = 0
+        paper_extra = len(gpto_dict[i]) - len(true_dict[i])
+        paper_bad_matches = 0
 
         if true_dict[i] and gpto_dict[i]:
+
+            # Finding the most similar cell culture
             for true_row in true_dict[i]:
                 max_sim_score = -1
                 max_sim_row = ()
 
                 for gpto_row in gpto_dict[i]:
                     sim_score = (similar(gpto_row[1], true_row[1]) * 100)
+                    if curated:
+                        for similarCulture in gpto_row[-1]:
+                            sim_score = max(sim_score, similar(similarCulture, true_row[1]))
                     if max_sim_score < sim_score:
                         max_sim_score = sim_score 
                         max_sim_row = gpto_row
                 
                 paper_avg_sim_score += max_sim_score
 
-                if max_sim_score >= 25.0:
-                    paper_count_match_25 += 1
-                if max_sim_score >= 50.0:
-                    paper_count_match_50 += 1
-                if max_sim_score >= 75.0:
-                    paper_count_match_75 += 1
+                # Exact Matches
                 if max_sim_score == 100.0:
                     paper_count_match_100 += 1
 
-                if true_row[-1] == 'Not Reported':
-                    if max_sim_row[2]:
-                        paper_reported_inco += 1
-                    else:
-                        paper_reported_corr += 1
-                    if max_sim_row[-1] == 'Not Available' or max_sim_row[-1] == '':
+                # Calculating the Ancestry Accuracy
+                if true_row[-2] == 'Not Reported':
+                    # TODO: check is both the "Ancestry from GPT" and "Ancestry from Web" is not Reported - Completed
+                    if(true_row[5] == "Not Reported" and true_row == "Not Reported"):
                         paper_ancestry_acc += 1
-                    else:
+                    else: 
                         paper_ancestry_inc += 1
-                        special_cases.append([max_sim_row, true_row])
                 else:
-                    if max_sim_row[2]:
-                        paper_reported_corr += 1
-                    else:
-                        paper_reported_inco += 1
-                    if max_sim_row == 'Not Available' or max_sim_row == '':
-                        paper_ancestry_inc += 1
-                    else:
-                        if len(max_sim_row[-1].split('\n')) > 1:
-                            origin = convert_string_to_df(max_sim_row[-1]).head(1)
-                            origin = list(origin['Origin'])[0]
-                            if origin.split(',')[0] == true_row[-1].split(',')[0]:
-                                paper_ancestry_acc += 1
-                            else:
-                                paper_ancestry_inc += 1
-                        else:
-                            if max_sim_row[-1] == true_row[-1]:
-                                paper_ancestry_acc += 1
-                            else:
-                                paper_ancestry_inc += 1
+                    true_result = true_dict[-1]                    
+                    gpt_result = max_sim_row[5]  # Assuming GPT results are in the last column
+                    web_result = max_sim_row[4]  # Assuming Web results are in the second last column
+                    
+                    # Create a dictionary to map web results to true results
+                    similarity_dict = {
+                        "European, South": "European, White",
+                        "European, North": "European, White",
+                        "East Asian, North": "Asian, East Asian",
+                        "East Asian, South": "Asian, East Asian",
+                        "South Asian": "Asian, East Asian",
+                        "Native American": "Admixed or Central/South America",
+                        "African": "African, Black or African American"
+                    }
 
-                if max_sim_score >= 50.0:
+                    # Check if any results are "Not Reported"
+                    if gpt_result == "Not Reported" and web_result == "Not Reported":
+                        paper_ancestry_inc += 1  # Both not reported, increment ancestry incorrect
+
+                    elif web_result != "Not Reported" and gpt_result == "Not Reported":
+                        # Web results are reported, check against true results
+                        if similarity_dict[web_result].lower() in true_result.lower():
+                            paper_ancestry_acc += 1
+                        else:
+                            paper_ancestry_inc += 1
+
+                    elif web_result == "Not Reported" and gpt_result != "Not Reported":
+                        # Use GPT function to check ancestry
+                        result = gptMatchAncestries(gpt_result, true_result)  # Assuming max_sim_row[1] is the culture name and max_sim_row[0] is the context
+                        if result.lower() == "true":
+                            paper_ancestry_acc += 1
+                        else:
+                            paper_ancestry_inc += 1
+
+
+                
+                # Storing the most similar row (taking the threshold into account)
+                if max_sim_score >= sim_score_thresh:
                     comparison_df.append([str(i) + '.pdf', 
                                           dict1[i], 
                                           true_row[1], 
@@ -155,6 +160,7 @@ def compare_csv(true_csv, gpto_csv, sim_score_thresh = 50.0):
                                           max_sim_row[-1]
                                          ])
                 else:
+                    paper_bad_matches += 1
                     comparison_df.append([str(i) + '.pdf',
                                           dict1[i], 
                                           true_row[1], 
@@ -164,17 +170,16 @@ def compare_csv(true_csv, gpto_csv, sim_score_thresh = 50.0):
                                           "N/A"
                                          ])
 
+        # Calculating scores 
         paper_wise_avg_similarity_score.append(paper_avg_sim_score / len(true_dict[i]))
         paper_wise_ancestry_acc.append(paper_ancestry_acc)
         paper_wise_ancestry_inc.append(paper_ancestry_inc)
-        paper_wise_count_match_25.append(paper_count_match_25)
-        paper_wise_count_match_50.append(paper_count_match_50)
-        paper_wise_count_match_75.append(paper_count_match_75)
         paper_wise_count_match_100.append(paper_count_match_100)
-        paper_wise_reported_corr.append(paper_reported_corr)
-        paper_wise_reported_inco.append(paper_reported_inco)
+        paper_wise_extras.append(paper_extra)
+        paper_wise_bad_matches(paper_bad_matches)
         total_count.append(len(true_dict[i]))
 
+    # Creating a "Paper Wise" Dataframe
     paper_wise_df = []
     for i in range(len(papers)):
         paper_wise_df.append([str(papers[i]) + '.pdf',
@@ -182,12 +187,9 @@ def compare_csv(true_csv, gpto_csv, sim_score_thresh = 50.0):
                               paper_wise_avg_similarity_score[i],
                               round((paper_wise_ancestry_acc[i] / total_count[i]) * 100, 2),
                               round((paper_wise_ancestry_inc[i] / total_count[i]) * 100, 2),
-                              round((paper_wise_reported_corr[i] / total_count[i]) * 100, 2),
-                              round((paper_wise_reported_inco[i] / total_count[i]) * 100, 2),
+                              round((paper_wise_bad_matches[i] / total_count[i]) * 100, 2),
+                              paper_wise_extras[i],
                               total_count[i],
-                              paper_wise_count_match_25[i],
-                              paper_wise_count_match_50[i],
-                              paper_wise_count_match_75[i],
                               paper_wise_count_match_100[i],
                              ])
     length = len(total_count)
@@ -196,15 +198,13 @@ def compare_csv(true_csv, gpto_csv, sim_score_thresh = 50.0):
                           sum(paper_wise_avg_similarity_score) / length,
                           round(sum(paper_wise_ancestry_acc) / sum(total_count) * 100, 2),
                           round(sum(paper_wise_ancestry_inc) / sum(total_count) * 100, 2),
-                          round(sum(paper_wise_reported_corr) / sum(total_count) * 100, 2),
-                          round(sum(paper_wise_reported_inco) / sum(total_count) * 100, 2),
+                          round((paper_wise_bad_matches[i] / total_count[i]) * 100, 2), 
+                          sum(paper_wise_extras),
                           sum(total_count),
-                          sum(paper_wise_count_match_25),
-                          sum(paper_wise_count_match_50),
-                          sum(paper_wise_count_match_75),
                           sum(paper_wise_count_match_100),
                          ])  
 
+    # Creating the comparing DataFrame
     comparison_df = pd.DataFrame(comparison_df, columns = ['PDF',
                                                            'Article',
                                                            'Name',
@@ -218,79 +218,33 @@ def compare_csv(true_csv, gpto_csv, sim_score_thresh = 50.0):
                                                              'Average_Similarity_Score',
                                                              'Ancestry_Accuracy',
                                                              'Ancestry_Loss',
-                                                             'Ancestry_Reported_Decision_Accuracy',
-                                                             'Ancestry_Reported_Decision_Loss',
+                                                             'Match_Not_Found',
+                                                             'Extras_Found',
                                                              'Total_Cultures_Paper_Wise',
-                                                             'Matches_Found_Paper_Wise_With_Similarity_Score_25',
-                                                             'Matches_Found_Paper_Wise_With_Similarity_Score_50',
-                                                             'Matches_Found_Paper_Wise_With_Similarity_Score_75',
-                                                             'Matches_Found_Paper_Wise_With_Similarity_Score_100'
+                                                             'Exact_Matches'
                                                             ])
 
+    # Printing the final results
     print("Final Result")
     print("------------------------------------")
     print("Overall Similarity Score: " ,sum(paper_wise_avg_similarity_score) / length)
     print("Ancestry Accuracy: ", round(sum(paper_wise_ancestry_acc) / sum(total_count) * 100, 2), " %")
-    print("Ancestry Reported Boolean Accuracy: ", round(sum(paper_wise_reported_corr) / sum(total_count) * 100, 2), " %")
-    print("Ancestry Reported Loss: ", round(sum(paper_wise_reported_inco) / sum(total_count) * 100, 2), " %")
-    print("Cell Lines with more than 25 similarity Scores: ", sum(paper_wise_count_match_25), " / ", sum(total_count))
-    print("Cell Lines with more than 50 similarity Scores: ", sum(paper_wise_count_match_50), " / ", sum(total_count))
-    print("Cell Lines with more than 75 similarity Scores: ", sum(paper_wise_count_match_75), " / ", sum(total_count))
-    print("Cell Lines with more than 100 similarity Scores: ", sum(paper_wise_count_match_100), " / ", sum(total_count))
+    print("Exact Matches: ", sum(paper_wise_count_match_100), " / ", sum(total_count))
+    print("Good Matches Found: ", 100 - round(sum(paper_wise_bad_matches) / sum(total_count) * 100, 2), " %")
     return comparison_df, paper_wise_df
 
-def visualize(paper_wise_df, images_dir):
+def visualize(paper_wise_df, images_dir, gpt):
     df = paper_wise_df.head(len(paper_wise_df) - 1)
+    gpt_df = pd.read_csv(gpt)
 
     print("Visualizing")
     
     # Set a consistent style for all plots
     plt.style.use('seaborn-v0_8-whitegrid')
-    
-    # Plot Average Similarity Scores
-    plt.figure(figsize=(12, 7))
-    sns.histplot(df['Average_Similarity_Score'], bins=20, kde=True, color='skyblue')
-    plt.title('Distribution of Average Similarity Scores', fontsize=18, fontweight='bold')
-    plt.xlabel('Average Similarity Score', fontsize=14)
-    plt.ylabel('Frequency', fontsize=14)
-    plt.savefig(os.path.join(images_dir, "average_similarity_score_distribution.png"), dpi=300, bbox_inches='tight')
-    plt.close()
-
-    # Plot Ancestry Accuracy and Loss
-    plt.figure(figsize=(12, 7))
-    sns.boxplot(data=df[['Ancestry_Accuracy', 'Ancestry_Loss', 'Ancestry_Reported_Decision_Accuracy', 'Ancestry_Reported_Decision_Loss']], palette='Set3')
-    plt.title('Ancestry Accuracy and Loss Metrics', fontsize=18, fontweight='bold')
-    plt.ylabel('Percentage', fontsize=14)
-    plt.xticks(rotation=45, ha='right', fontsize=12)
-    plt.savefig(os.path.join(images_dir, "ancestry_accuracy_and_loss.png"), dpi=300, bbox_inches='tight')
-    plt.close()
-
-    # Stacked bar plot for matches found
-    plt.figure(figsize=(14, 8))
-    df.plot(x='PDF', y=['Matches_Found_Paper_Wise_With_Similarity_Score_25', 'Matches_Found_Paper_Wise_With_Similarity_Score_50', 'Matches_Found_Paper_Wise_With_Similarity_Score_75', 'Matches_Found_Paper_Wise_With_Similarity_Score_100'], kind='bar', stacked=True, colormap='viridis')
-    plt.title('Matches Found Paper-Wise with Different Similarity Scores', fontsize=18, fontweight='bold')
-    plt.xlabel('PDF', fontsize=14)
-    plt.ylabel('Number of Matches Found', fontsize=14)
-    plt.legend(fontsize=12, bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig(os.path.join(images_dir, "matches_found_paper_wise.png"), dpi=300, bbox_inches='tight')
-    plt.close()
-
-    # Scatter plot to visualize Ancestry_Accuracy vs. Average_Similarity_Score
-    plt.figure(figsize=(10, 6))
-    scatter = sns.scatterplot(x='Average_Similarity_Score', y='Ancestry_Accuracy', data=df, hue='Total_Cultures_Paper_Wise', palette='viridis', size='Total_Cultures_Paper_Wise', sizes=(20, 200))
-    plt.title('Ancestry Accuracy vs. Average Similarity Score', fontsize=18, fontweight='bold')
-    plt.xlabel('Average Similarity Score', fontsize=14)
-    plt.ylabel('Ancestry Accuracy', fontsize=14)
-    plt.legend(title='Total Cultures', title_fontsize='13', fontsize='11', bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.tight_layout()
-    plt.savefig(os.path.join(images_dir, "ancestry_accuracy_vs_similarity_score.png"), dpi=300, bbox_inches='tight')
-    plt.close()
 
     # Plot line graph for Average Similarity Scores over different papers
     plt.figure(figsize=(12, 6))
-    sns.lineplot(x='PDF', y='Average_Similarity_Score', data=df, marker='o')
+    sns.lineplot(x='PDF', y='Average_Similarity_Score', data=df, marker='o', ci='sd', linewidth=2, palette='deep')
     plt.title('Average Similarity Score Across Different Papers', fontsize=18, fontweight='bold')
     plt.xlabel('PDF', fontsize=14)
     plt.ylabel('Average Similarity Score', fontsize=14)
@@ -299,57 +253,88 @@ def visualize(paper_wise_df, images_dir):
     plt.savefig(os.path.join(images_dir, "average_similarity_score.png"), dpi=300, bbox_inches='tight')
     plt.close()
 
-    # Plot line graph for Ancestry Accuracy and Ancestry Reported Decision Accuracy
-    plt.figure(figsize=(12, 6))
-    sns.lineplot(x='PDF', y='Ancestry_Accuracy', data=df, marker='o', label='Ancestry Accuracy')
-    sns.lineplot(x='PDF', y='Ancestry_Reported_Decision_Accuracy', data=df, marker='s', label='Reported Decision Accuracy')
-    plt.title('Ancestry and Reported Decision Accuracy Across Different Papers', fontsize=18, fontweight='bold')
-    plt.xlabel('PDF', fontsize=14)
-    plt.ylabel('Accuracy (%)', fontsize=14)
-    plt.xticks(rotation=90)
-    plt.legend(fontsize=12)
-    plt.tight_layout()
-    plt.savefig(os.path.join(images_dir, 'ancestry_accuracy_decision_accuracy.png'), dpi=300, bbox_inches='tight')
+    # This section generates a pie chart visualizing the distribution of ancestries obtained from web sources.
+    ancestry_counts = gpt_df["Ancestry from web"].value_counts()
+    ancestry_counts = ancestry_counts[ancestry_counts.index != "Not Reported"]  # Exclude "Not Reported" value
+    plt.figure(figsize=(8, 8))
+    plt.pie(ancestry_counts, labels=ancestry_counts.index, autopct='%1.1f%%', startangle=90)
+    plt.title('Distribution of Ancestry from Web', fontsize=18, fontweight='bold')
+    plt.axis('equal')  # Equal aspect ratio ensures that pie chart is a circle.
+    plt.savefig(os.path.join(images_dir, "ancestry_distribution.png"), dpi=300, bbox_inches='tight')
     plt.close()
 
-    # Plot line graph for Ancestry Loss and Ancestry Reported Decision Loss
+    # Prepare data for double bar graph
+    total_counts = paper_wise_df['Total_Cultures_Paper_Wise']
+    bad_matches = paper_wise_df['Match_Not_Found']
+
+    # Create a DataFrame for plotting
+    plot_data = pd.DataFrame({
+        'Total Count': total_counts,
+        'Bad Matches': bad_matches
+    })
+
+    # Plotting the double bar graph
     plt.figure(figsize=(12, 6))
-    sns.lineplot(x='PDF', y='Ancestry_Loss', data=df, marker='o', label='Ancestry Loss')
-    sns.lineplot(x='PDF', y='Ancestry_Reported_Decision_Loss', data=df, marker='s', label='Reported Decision Loss')
-    plt.title('Ancestry and Reported Decision Loss Across Different Papers', fontsize=18, fontweight='bold')
-    plt.xlabel('PDF', fontsize=14)
-    plt.ylabel('Loss (%)', fontsize=14)
-    plt.xticks(rotation=90)
-    plt.legend(fontsize=12)
+    plot_data.plot(kind='bar', width=0.8)
+    plt.title('Total Count vs Bad Matches', fontsize=18, fontweight='bold')
+    plt.xlabel('Papers', fontsize=14)
+    plt.ylabel('Count', fontsize=14)
+    plt.xticks(ticks=range(len(paper_wise_df)), labels=paper_wise_df['PDF'], rotation=45)
+    plt.legend(title='Metrics')
     plt.tight_layout()
-    plt.savefig(os.path.join(images_dir, "ancestry_loss_decision_loss.png"), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(images_dir, "total_count_vs_bad_matches.png"), dpi=300, bbox_inches='tight')
     plt.close()
 
-    # Line graph to visualize Matches Found with Different Similarity Scores
+    # Additional figures
+    # Plot bar graph for Ancestry Accuracy
     plt.figure(figsize=(12, 6))
-    sns.lineplot(x='PDF', y='Matches_Found_Paper_Wise_With_Similarity_Score_25', data=df, marker='o', label='Similarity Score 25')
-    sns.lineplot(x='PDF', y='Matches_Found_Paper_Wise_With_Similarity_Score_50', data=df, marker='s', label='Similarity Score 50')
-    sns.lineplot(x='PDF', y='Matches_Found_Paper_Wise_With_Similarity_Score_75', data=df, marker='^', label='Similarity Score 75')
-    sns.lineplot(x='PDF', y='Matches_Found_Paper_Wise_With_Similarity_Score_100', data=df, marker='D', label='Similarity Score 100')
-    plt.title('Matches Found with Different Similarity Scores Across Papers', fontsize=18, fontweight='bold')
+    sns.barplot(x='PDF', y='Ancestry_Accuracy', data=paper_wise_df, palette='pastel')
+    plt.title('Ancestry Accuracy per Paper', fontsize=18, fontweight='bold')
     plt.xlabel('PDF', fontsize=14)
-    plt.ylabel('Matches Found', fontsize=14)
+    plt.ylabel('Ancestry Accuracy (%)', fontsize=14)
     plt.xticks(rotation=90)
-    plt.legend(fontsize=12, bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.tight_layout()
-    plt.savefig(os.path.join(images_dir, "matches_found_similarity_scores.png"), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(images_dir, "ancestry_accuracy_per_paper.png"), dpi=300, bbox_inches='tight')
     plt.close()
+
+    # Plot line graph for Match Not Found percentage
+    plt.figure(figsize=(12, 6))
+    sns.lineplot(x='PDF', y='Match_Not_Found', data=paper_wise_df, marker='o', ci='sd', linewidth=2, palette='muted')
+    plt.title('Match Not Found Across Different Papers', fontsize=18, fontweight='bold')
+    plt.xlabel('PDF', fontsize=14)
+    plt.ylabel('Match Not Found Count', fontsize=14)
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    plt.savefig(os.path.join(images_dir, "match_not_found_per_paper.png"), dpi=300, bbox_inches='tight')
+    plt.close()
+
+    # Plot bar graph for Exact Matches
+    plt.figure(figsize=(12, 6))
+    sns.barplot(x='PDF', y='Exact_Matches', data=paper_wise_df, palette='viridis')
+    plt.title('Exact Matches per Paper', fontsize=18, fontweight='bold')
+    plt.xlabel('PDF', fontsize=14)
+    plt.ylabel('Exact Matches', fontsize=14)
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    plt.savefig(os.path.join(images_dir, "exact_matches_per_paper.png"), dpi=300, bbox_inches='tight')
+    plt.close()
+
+    
+    
 
     print("Images Saved to Images Folder.")
 
 def main():
     args = parser.parse_args()
+    print(args)
     
     # Create directory structure
     input_file_name = os.path.splitext(os.path.basename(args.gpt))[0]
     test_dir = os.path.join(args.output, input_file_name)
     csv_dir = os.path.join(test_dir, "csv")
     images_dir = os.path.join(test_dir, "images")
+    if not os.path.exists(test_dir):
+        os.makedirs(test_dir)
     os.makedirs(csv_dir, exist_ok=True)
     os.makedirs(images_dir, exist_ok=True)
     
@@ -368,7 +353,7 @@ def main():
         paper_wise_df.to_csv(os.path.join(csv_dir, "PaperWise.csv"), index=False)
         
         # Generate visualizations
-        visualize(paper_wise_df, images_dir)
+        visualize(paper_wise_df, images_dir, args.gpt)
         
         # Restore stdout
         sys.stdout = original_stdout
