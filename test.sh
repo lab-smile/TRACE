@@ -14,8 +14,9 @@ SCORE_VALUE=50.0
 # Run the test
 singularity exec --bind /red --nv "$SINGULARITY_IMAGE" python test.py \
     --gpt "$GPT_FILE" \
-    --truth "$TRUTH_FILE" \
+    --true "$TRUTH_FILE" \
     --score "$SCORE_VALUE" \
+    --curated \
     --output "$OUTPUT_DIRECTORY"
 
 echo "Job completed at $(date)"
