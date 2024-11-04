@@ -22,7 +22,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-t", "--true", default="", type=str, help="True or Human made file", required=True)
 parser.add_argument("-g", "--gpt", default="", type=str, help="GPT and web generated file", required=True)
-parser.add_argument("-c", "--gpt", action="store_true", help="Are the results curated?", required=True)
+parser.add_argument("-c", "--curated", action="store_true", help="Are the results curated?", required=True)
 parser.add_argument("-s", "--score", default=50.0, type=float, help="Similarity score threshold")
 parser.add_argument("-o", "--output", default="", type=str, help="Output directory for test results", required=True)
 

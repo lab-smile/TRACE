@@ -1,10 +1,4 @@
 import re
-import nltk
-from nltk.corpus import words as nltk_words
-
-nltk.download('words', quiet=True)
-
-from .nationalities import nationalities
 
 def findSurroundingSentences(text: str, target_word: str, context_size: int = 100) -> list:
     """
