@@ -21,13 +21,14 @@ This project is designed to analyze scientific texts for mentions of human cell 
   - argparse
   - matplotlib
   - seaborn
+  - fuzzywuzzy
 
 ## Installation
 
 1. Clone this repository
 2. Install the required packages:
    ```
-   pip install pandas PyPDF2 openai argparse matplotlib seaborn
+   pip install pandas PyPDF2 openai argparse matplotlib seaborn fuzzywuzzy
    ```
 3. Set up your OpenAI API key as an environment variable
 
@@ -39,11 +40,28 @@ This project is designed to analyze scientific texts for mentions of human cell 
 python /path/to/your/main.py \
     --batch \
     --directory $INPUT_DIRECTORY \
-    --test-similarity \
+    --test \
     --progress \
-    --truth-file $TRUTH_FILE \
+    --truth $TRUTH_FILE \
     --score $SCORE_VALUE \
-    --output-directory $OUTPUT_DIRECTORY \
+    --output $OUTPUT_DIRECTORY \
+    --curate \
     --post-process \
     --run "batch_run_1"
 ```
+
+This section explains the command-line arguments used in the script for processing PDF files related to cell culture analysis.
+
+- `-b` or `--batch`: Enables batch processing mode, allowing the script to process multiple PDF files in a specified directory.
+- `-d` or `--directory`: Specifies the base directory where the PDF files are located when running in batch mode.
+- `-f` or `--file`: Indicates the file path for processing a single PDF file in individual mode.
+- `-v` or `--verbose`: Activates verbose output, providing detailed logging information during execution.
+- `-p` or `--progress`: Displays progress indication during batch operations, helping users track the processing status.
+- `-c` or `--curate`: Enables curation of results, filtering to obtain the most optimal cultures from similar entries.
+- `-ts` or `--test`: Runs the script in test mode, allowing for validation of results against a ground truth dataset.
+- `-tr` or `--truth`: Specifies the path to the ground truth CSV file used for comparison in test mode.
+- `-s` or `--score`: Sets the similarity score threshold for filtering results, with a default value of 50.0.
+- `-o` or `--output`: Defines the output directory where results will be saved, and is a required argument.
+- `-pp` or `--post-process`: Applies a post-processing filter to the results, removing cultures not found in the original text.
+- `-r` or `--run_name`: Provides a name for the run, which is used to organize output files in batch mode.
+
