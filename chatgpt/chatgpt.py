@@ -1,7 +1,14 @@
-from openai import OpenAI
 import openai
+import os
 
-client = OpenAI()
+from openai import OpenAI
+from os.path import join, dirname
+from dotenv import load_dotenv
+
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
 def gptUseCultures(chunk, verbose=False):
@@ -14,7 +21,7 @@ def gptUseCultures(chunk, verbose=False):
             messages=[
                 {"role": "system", "content": "You are a precise and accurate assistant specialized in identifying human cell types from scientific texts."},
                 {"role": "user", "content": f"Analyze the following article text and extract a list of human cell types (cell lines or primary cell cultures only):\n\n{chunk}"},
-                {"role": "assistant", "content": "I will provide a comma-separated list of human cell types (cell lines or primary cell cultures) mentioned in the text. I will exclude human names, department names, and university names. If no relevant cell types are found, I will return a single hyphen (-). I will aim to find at least 20 cell types if possible. I will just return a comma separated list of cell types and no other text."}
+                {"role": "assistant", "content": "I will provide a comma-separated list of human cell types (cell lines or primary cell cultures) mentioned in the text. I will exclude human names, department names, and university names. If no relevant cell types are found, I will return a single hyphen (-). I will aim to find at least 10 cell types if possible. I will just return a comma separated list of cell types and no other text."}
             ]
         )
         result = completion.choices[0].message.content
@@ -93,3 +100,24 @@ def gptFilterList(text, l, verbose=False):
     if verbose:
         print(f"Filtered list: {result}")
     return result
+
+
+def gptMatchAncestries(gpt, web):
+    """Checks if two races or ethnicities match using GPT."""
+    if not gpt or not web:
+        return False
+    
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a precise and accurate assistant specialized in comparing ethnicities."},
+                {"role": "user", "content": f"Do the following ancestries match? GPT: {gpt}, Web: {web}"},
+                {"role": "assistant", "content": "I will return 'True' if they match and 'False' if they do not. I will only answer in one word either True or False."}
+            ]
+        )
+        result = completion.choices[0].message.content.strip().lower()
+        return result == 'true'
+    except openai.BadRequestError as e:
+        print(f"Error in gptMatchAncestries: {str(e)}")
+        return False
