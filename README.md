@@ -45,7 +45,7 @@ Ancestry reporting is essential to ensure transparency and proper representation
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/TRACE.git
+git clone https://github.com/lab-smile/TRACE.git
 cd TRACE
 pip install pandas PyPDF2 openai argparse matplotlib seaborn fuzzywuzzy
 ```
