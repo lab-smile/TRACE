@@ -136,7 +136,7 @@ TRACE/
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome pull requests, feedback, and feature suggestions.
 Please see `CONTRIBUTING.md` (coming soon) for contribution guidelines.
