@@ -131,7 +131,7 @@ TRACE/
 ├── main.py               # Core entry point
 ├── test.py / test.sh     # Evaluation tools
 ├── LICENSE
-├──README.md
+├── README.md
 ```
 
 ---
