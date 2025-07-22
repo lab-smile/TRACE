@@ -203,7 +203,7 @@ If you use TRACE in your work, please cite it as:
 A: No, TRACE is optimized for human cell line detection and ancestry estimation.
 
 **Q: Can I use it without OpenAI/GPT?**
-A: Yes, regex-only mode will partially work, but GPT enhances accuracy. We are also working on providing 
+A: Yes, there is a regex-only mode which offers partial functionality but GPT significantly improves accuracy. We're also actively working on adding support for open-source and local LLMs, eliminating the need for reliance on OpenAI/GPT.
 
 **Q: How is ancestry determined?**
 A: TRACE matches the detected cell line to Cellosaurus entries and parses ancestry metadata using GPT.
